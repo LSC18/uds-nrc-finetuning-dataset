@@ -1,0 +1,50 @@
+{
+  "format_version": 1,
+  "purpose": "schema_pipeline_pilot",
+  "training_ready": false,
+  "qlora_smoke_test_ready": true,
+  "ecu_profile": "virtual_ecu_v2",
+  "generated_at": "2026-09-18T04:01:56+09:00",
+  "seed": 20260918,
+  "episode_count": 7200,
+  "raw_sample_count": 21461,
+  "sample_count": 4721,
+  "unique_sample_count": 4721,
+  "exact_duplicate_count": 16740,
+  "exact_duplicate_ratio": 0.78,
+  "split_sample_counts": {
+    "train": 3904,
+    "validation": 431,
+    "test": 386
+  },
+  "scenario_counts": {
+    "failure": 286,
+    "nrc_invalid_key_recovery": 601,
+    "nrc_length_recovery": 604,
+    "nrc_range_recovery": 613,
+    "nrc_security_recovery": 746,
+    "nrc_sequence_recovery": 567,
+    "nrc_session_recovery": 656,
+    "read_did_success": 624,
+    "reset_success": 288,
+    "security_unlock_success": 629,
+    "session_success": 572,
+    "write_config_success": 1014
+  },
+  "nrc_counts": {
+    "0x11": 89,
+    "0x12": 122,
+    "0x13": 679,
+    "0x24": 567,
+    "0x31": 613,
+    "0x33": 746,
+    "0x35": 601,
+    "0x7E": 656
+  },
+  "state_counts": {
+    "default_session:locked": 4414,
+    "extended_session:locked": 11074,
+    "extended_session:unlocked": 5973
+  },
+  "replay_failures": []
+}
