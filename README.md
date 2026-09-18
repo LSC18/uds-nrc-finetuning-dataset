@@ -36,6 +36,9 @@ full_v2/
 └── metadata.json      # 분포와 품질 검사 결과
 ```
 
+상세 용도와 한계는 [`DATASET_CARD.md`](DATASET_CARD.md), 파일 무결성 값은 [`SHA256SUMS`](SHA256SUMS)에 기록한다.
+Colab 실행 순서는 [`COLAB_RUNBOOK.md`](COLAB_RUNBOOK.md)에 정리했다.
+
 학습 파일은 `messages` 기반 chat JSONL이다.
 
 ```json
@@ -57,7 +60,18 @@ full_v2/
 ```bash
 python3 scripts/validate_dataset.py
 python3 -m unittest discover -s tests -v
+shasum -a 256 -c SHA256SUMS
 ```
+
+## 학습 직전 점검
+
+Qwen tokenizer를 내려받은 뒤 전 데이터의 chat template 적용과 token 길이를 확인한다. 로컬처럼 CUDA가 없는 환경에서는 데이터 점검만 수행한다.
+
+```bash
+python3 scripts/preflight.py --skip-cuda
+```
+
+NVIDIA GPU 환경에서는 `--skip-cuda` 없이 실행하며 결과가 `status: ready`, `truncation_count: 0`인지 확인한다.
 
 ## QLoRA smoke test
 
@@ -68,13 +82,44 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-train.txt
 
-python3 train_qlora.py \
-  --model-name Qwen/Qwen2.5-1.5B-Instruct \
-  --output-dir outputs/uds-nrc-smoke \
-  --max-steps 50
+python3 scripts/preflight.py
+python3 train_qlora.py --config configs/qlora_smoke.json
 ```
 
-본 학습 전에는 `--max-steps`를 늘리고 validation loss 및 `full_v2/test.jsonl`의 exact-match 정확도를 별도로 기록한다.
+학습 데이터는 conversational prompt-completion 형식으로 변환되며 loss는 assistant completion에만 적용된다. 4-bit NF4와 `target_modules="all-linear"`를 사용한다.
+
+학습 후 test exact-match 평가:
+
+```bash
+python3 evaluate_exact_match.py --adapter-path outputs/uds-nrc-smoke
+```
+
+학습 전 base model baseline도 같은 평가기로 기록한다.
+
+```bash
+python3 evaluate_exact_match.py \
+  --model-name Qwen/Qwen2.5-1.5B-Instruct \
+  --output reports/baseline_predictions.jsonl
+```
+
+smoke test가 정상 종료되면 전체 설정으로 실행한다.
+
+```bash
+python3 train_qlora.py --config configs/qlora_full.json
+python3 evaluate_exact_match.py --adapter-path outputs/uds-nrc-full
+```
+
+## 현재 준비 상태
+
+- 데이터 schema 및 split 검증: 완료
+- episode replay: 7,200개 모두 완료
+- 정확 중복 및 split leakage 검사: 완료
+- Qwen chat template 적용: 완료
+- token 길이 검사: 최대 284, `max_length=512` 초과 0건
+- smoke/full QLoRA 설정: 완료
+- completion-only loss 구성: 완료
+- 학습 후 exact-match 평가기: 완료
+- 남은 작업: NVIDIA GPU에서 실제 weight update 실행
 
 ## 한계
 

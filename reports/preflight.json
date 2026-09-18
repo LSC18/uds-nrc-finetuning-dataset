@@ -1,0 +1,43 @@
+{
+  "status": "data_ready_waiting_for_cuda",
+  "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+  "max_length": 512,
+  "truncation_count": 0,
+  "token_stats": {
+    "train": {
+      "count": 3904,
+      "min": 101,
+      "median": 187,
+      "p95": 278,
+      "p99": 284,
+      "max": 284,
+      "over_max_length": 0
+    },
+    "validation": {
+      "count": 431,
+      "min": 102,
+      "median": 188,
+      "p95": 239,
+      "p99": 284,
+      "max": 284,
+      "over_max_length": 0
+    },
+    "test": {
+      "count": 386,
+      "min": 103,
+      "median": 158,
+      "p95": 242,
+      "p99": 284,
+      "max": 284,
+      "over_max_length": 0
+    }
+  },
+  "environment": {
+    "python": "3.10.2",
+    "torch": "2.12.0",
+    "transformers": "5.8.1",
+    "cuda_available": false,
+    "bf16_supported": false,
+    "gpu": null
+  }
+}
