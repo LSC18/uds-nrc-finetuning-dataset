@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections import defaultdict
 from pathlib import Path
 
 import torch
@@ -26,6 +27,7 @@ def main() -> int:
     source.add_argument("--adapter-path", type=Path)
     source.add_argument("--model-name")
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--data-dir", type=Path, default=ROOT / "full_v3")
     parser.add_argument("--output", type=Path, default=ROOT / "reports/test_predictions.jsonl")
     args = parser.parse_args()
 
@@ -50,12 +52,16 @@ def main() -> int:
     model.eval()
     rows = [
         json.loads(line)
-        for line in (ROOT / "full_v2/test.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in (args.data_dir / "test.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     if args.limit is not None:
         rows = rows[: args.limit]
 
     correct = 0
+    grouped: dict[str, dict[str, list[int]]] = {
+        "scenario": defaultdict(list),
+        "ecu_profile": defaultdict(list),
+    }
     predictions: list[dict[str, object]] = []
     for row in rows:
         expected = row["messages"][-1]["content"]
@@ -79,9 +85,15 @@ def main() -> int:
         prediction = normalize_prediction(raw_prediction)
         matched = prediction == expected
         correct += int(matched)
+        grouped["scenario"][str(row.get("scenario", "unknown"))].append(int(matched))
+        grouped["ecu_profile"][str(row.get("ecu_profile", "unknown"))].append(
+            int(matched)
+        )
         predictions.append(
             {
                 "sample_id": row["sample_id"],
+                "ecu_profile": row.get("ecu_profile"),
+                "scenario": row.get("scenario"),
                 "expected": expected,
                 "prediction": prediction,
                 "raw_prediction": raw_prediction,
@@ -97,9 +109,18 @@ def main() -> int:
     summary = {
         "model": str(model_source),
         "adapter": args.adapter_path is not None,
+        "data_dir": str(args.data_dir),
         "samples": len(rows),
         "correct": correct,
         "exact_match": correct / len(rows) if rows else 0.0,
+        "exact_match_by_scenario": {
+            key: sum(values) / len(values)
+            for key, values in sorted(grouped["scenario"].items())
+        },
+        "exact_match_by_ecu_profile": {
+            key: sum(values) / len(values)
+            for key, values in sorted(grouped["ecu_profile"].items())
+        },
         "predictions": str(args.output),
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))

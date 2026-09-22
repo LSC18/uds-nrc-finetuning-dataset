@@ -6,6 +6,7 @@ It never communicates with a real vehicle, ECU, CAN interface, or network.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import IntEnum
 
 
@@ -18,6 +19,43 @@ class Nrc(IntEnum):
     SECURITY_ACCESS_DENIED = 0x33
     INVALID_KEY = 0x35
     SERVICE_NOT_SUPPORTED_IN_ACTIVE_SESSION = 0x7E
+
+
+@dataclass(frozen=True)
+class EcuProfile:
+    """Observable-behavior profile used for synthetic generalization tests."""
+
+    name: str
+    write_requires_extended_session: bool
+    write_requires_security: bool
+    security_requires_extended_session: bool
+
+
+STRICT_PROFILE = EcuProfile(
+    name="strict_session_security",
+    write_requires_extended_session=True,
+    write_requires_security=True,
+    security_requires_extended_session=True,
+)
+
+SESSION_ONLY_PROFILE = EcuProfile(
+    name="session_only",
+    write_requires_extended_session=True,
+    write_requires_security=False,
+    security_requires_extended_session=True,
+)
+
+SECURITY_ONLY_PROFILE = EcuProfile(
+    name="security_only_heldout",
+    write_requires_extended_session=False,
+    write_requires_security=True,
+    security_requires_extended_session=False,
+)
+
+ECU_PROFILES = {
+    profile.name: profile
+    for profile in (STRICT_PROFILE, SESSION_ONLY_PROFILE, SECURITY_ONLY_PROFILE)
+}
 
 
 class VirtualEcu:
@@ -36,7 +74,8 @@ class VirtualEcu:
     SECURITY_SEED = bytes((0x12, 0x34))
     SECURITY_KEY = bytes((0xBE, 0xEF))
 
-    def __init__(self) -> None:
+    def __init__(self, profile: EcuProfile = STRICT_PROFILE) -> None:
+        self.profile = profile
         self.active_session = 0x01
         self.supported_sessions = {0x01, 0x03}
         self.security_unlocked = False
@@ -93,7 +132,7 @@ class VirtualEcu:
         if (request[1] & 0x7F) != 0x01:
             return self._negative_response(sid, Nrc.SUBFUNCTION_NOT_SUPPORTED)
         response = bytes((sid + self.POSITIVE_RESPONSE_OFFSET, request[1]))
-        self.__init__()
+        self.__init__(self.profile)
         return response
 
     def _read_data_by_identifier(self, request: bytes) -> bytes:
@@ -109,7 +148,7 @@ class VirtualEcu:
 
     def _security_access(self, request: bytes) -> bytes:
         sid = request[0]
-        if self.active_session != 0x03:
+        if self.profile.security_requires_extended_session and self.active_session != 0x03:
             return self._negative_response(sid, Nrc.SERVICE_NOT_SUPPORTED_IN_ACTIVE_SESSION)
         if len(request) < 2:
             return self._negative_response(sid, Nrc.INCORRECT_MESSAGE_LENGTH_OR_INVALID_FORMAT)
@@ -135,9 +174,9 @@ class VirtualEcu:
         sid = request[0]
         if len(request) != 4:
             return self._negative_response(sid, Nrc.INCORRECT_MESSAGE_LENGTH_OR_INVALID_FORMAT)
-        if self.active_session != 0x03:
+        if self.profile.write_requires_extended_session and self.active_session != 0x03:
             return self._negative_response(sid, Nrc.SERVICE_NOT_SUPPORTED_IN_ACTIVE_SESSION)
-        if not self.security_unlocked:
+        if self.profile.write_requires_security and not self.security_unlocked:
             return self._negative_response(sid, Nrc.SECURITY_ACCESS_DENIED)
         did = int.from_bytes(request[1:3], "big")
         if did != self.CONFIG_DID:

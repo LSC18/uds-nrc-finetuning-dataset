@@ -31,6 +31,7 @@ def main() -> int:
     from transformers import AutoTokenizer
 
     config = json.loads(args.config.read_text(encoding="utf-8"))
+    data_dir = ROOT / config.get("data_dir", "full_v2")
     tokenizer = AutoTokenizer.from_pretrained(
         config["model_name"],
         use_fast=True,
@@ -44,7 +45,7 @@ def main() -> int:
     for split in SPLITS:
         rows = [
             json.loads(line)
-            for line in (ROOT / "full_v2" / f"{split}.jsonl").read_text(
+            for line in (data_dir / f"{split}.jsonl").read_text(
                 encoding="utf-8"
             ).splitlines()
         ]
@@ -77,6 +78,7 @@ def main() -> int:
     report = {
         "status": "ready" if cuda_available else "data_ready_waiting_for_cuda",
         "model_name": config["model_name"],
+        "data_dir": str(data_dir),
         "max_length": config["max_length"],
         "truncation_count": truncation_count,
         "token_stats": token_stats,

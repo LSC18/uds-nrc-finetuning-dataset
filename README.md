@@ -1,126 +1,94 @@
-# UDS NRC Next-Request Fine-tuning Dataset
+# UDS NRC Closed-Loop Fine-tuning Dataset
 
-격리된 Virtual ECU에서 현재 상태와 이전 UDS 요청·응답 이력을 보고 다음 UDS 요청을 선택하도록 학습하기 위한 합성 데이터셋이다.
+격리된 Virtual ECU에서 목표와 관찰 가능한 UDS 요청·응답·NRC 이력만 보고 다음 요청을 선택하는 모델을 학습하기 위한 합성 데이터셋이다. 실제 차량, 실제 ECU, CAN 인터페이스 또는 외부 네트워크와 통신하지 않는다.
 
-실제 차량, 실제 ECU, CAN 인터페이스 또는 외부 네트워크와 통신하지 않는다.
+## v3 데이터 현황
 
-## 데이터 현황
-
-- Virtual ECU profile: `virtual_ecu_v2`
-- 원본 episode: 7,200개
-- 원본 step: 21,461개
-- 정확 중복 제거 후 학습 샘플: 4,721개
-- train / validation / test: 3,904 / 431 / 386
-- split 간 정확 중복 및 episode 중복: 0건
+- 원본 episode: 15,000개
+- 원본 step: 41,980개
+- 정확 중복 제거 후 고유 샘플: 10,407개
+- train / validation / held-out test: 8,266 / 777 / 1,364
+- 학습 ECU profile: `strict_session_security`, `session_only`
+- 미관측 테스트 profile: `security_only_heldout`
+- 프롬프트 제외 항목: `current_state`, `state_after`, `ecu_profile`
+- split 간 정확 중복: 0건
 - episode 재현 실패: 0건
-- QLoRA smoke test 준비 상태: `true`
+- QLoRA 준비 상태: `true`
 
-지원하는 UDS 동작:
-
-- `0x10` DiagnosticSessionControl
-- `0x11` ECUReset
-- `0x22` ReadDataByIdentifier
-- `0x27` SecurityAccess
-- `0x2E` WriteDataByIdentifier
-- `0x3E` TesterPresent
-- NRC `0x11`, `0x12`, `0x13`, `0x24`, `0x31`, `0x33`, `0x35`, `0x7E`
+지원 동작은 `0x10`, `0x11`, `0x22`, `0x27`, `0x2E`, `0x3E`이며 NRC `0x11`, `0x12`, `0x13`, `0x24`, `0x31`, `0x33`, `0x35`, `0x7E`를 생성한다.
 
 ## 파일
 
 ```text
-full_v2/
-├── episodes.jsonl     # 재현 가능한 원본 episode
-├── train.jsonl        # QLoRA 학습 split
-├── validation.jsonl   # 검증 split
-├── test.jsonl         # 최종 평가 split
-└── metadata.json      # 분포와 품질 검사 결과
+full_v3/
+├── episodes.jsonl
+├── train.jsonl
+├── validation.jsonl
+├── test.jsonl
+└── metadata.json
 ```
 
-상세 용도와 한계는 [`DATASET_CARD.md`](DATASET_CARD.md), 파일 무결성 값은 [`SHA256SUMS`](SHA256SUMS)에 기록한다.
-Colab 실행 순서는 [`COLAB_RUNBOOK.md`](COLAB_RUNBOOK.md)에 정리했다.
+`full_v2/`는 상태 정답을 입력으로 제공하던 이전 파이프라인 검증용 데이터로 보존한다. 논문 실험에는 `full_v3/`를 사용한다.
 
-학습 파일은 `messages` 기반 chat JSONL이다.
+학습 샘플의 `messages`에는 목표와 관찰 이력만 포함된다. `ecu_profile`, `state_before`, `state_after`는 평가·오류 분석용 row metadata이며 모델 입력에 포함되지 않는다.
 
-```json
-{
-  "sample_id": "run_000001_step_1",
-  "episode_id": "run_000001",
-  "messages": [
-    {"role": "system", "content": "..."},
-    {"role": "user", "content": "..."},
-    {"role": "assistant", "content": "10 03"}
-  ]
-}
-```
-
-## 검증
-
-외부 패키지 없이 실행할 수 있다.
+## 생성 및 검증
 
 ```bash
-python3 scripts/validate_dataset.py
+python3 collect_dataset_v3.py --count 15000 --output-dir full_v3
+python3 scripts/validate_dataset.py --data-dir full_v3
 python3 -m unittest discover -s tests -v
+python3 scripts/build_checksums.py
 shasum -a 256 -c SHA256SUMS
 ```
 
 ## 학습 직전 점검
 
-Qwen tokenizer를 내려받은 뒤 전 데이터의 chat template 적용과 token 길이를 확인한다. 로컬처럼 CUDA가 없는 환경에서는 데이터 점검만 수행한다.
-
 ```bash
-python3 scripts/preflight.py --skip-cuda
+python3 scripts/preflight.py \
+  --config configs/qlora_v3_smoke_1.5b.json \
+  --skip-cuda \
+  --report reports/preflight_v3_1.5b.json
 ```
 
-NVIDIA GPU 환경에서는 `--skip-cuda` 없이 실행하며 결과가 `status: ready`, `truncation_count: 0`인지 확인한다.
+NVIDIA GPU에서는 `--skip-cuda`를 제거한다. 현재 최대 길이는 228토큰이며 `max_length=512` 초과 샘플은 없다.
 
-## QLoRA smoke test
-
-NVIDIA GPU가 있는 Linux 또는 Colab 환경에서 실행한다. 기본 모델은 실행 시 명시하며, 모델 라이선스와 접근 권한은 별도로 확인해야 한다.
+## 권장 실험 순서
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-train.txt
-
-python3 scripts/preflight.py
-python3 train_qlora.py --config configs/qlora_smoke.json
-```
-
-학습 데이터는 conversational prompt-completion 형식으로 변환되며 loss는 assistant completion에만 적용된다. 4-bit NF4와 `target_modules="all-linear"`를 사용한다.
-
-학습 후 test exact-match 평가:
-
-```bash
-python3 evaluate_exact_match.py --adapter-path outputs/uds-nrc-smoke
-```
-
-학습 전 base model baseline도 같은 평가기로 기록한다.
-
-```bash
+# 1. base 1.5B held-out baseline
 python3 evaluate_exact_match.py \
   --model-name Qwen/Qwen2.5-1.5B-Instruct \
-  --output reports/baseline_predictions.jsonl
+  --data-dir full_v3 \
+  --output reports/v3_base_1.5b.jsonl
+
+# 2. 50-step smoke
+python3 train_qlora.py --config configs/qlora_v3_smoke_1.5b.json
+
+# 3. full 1.5B
+python3 train_qlora.py --config configs/qlora_v3_full_1.5b.json
+python3 evaluate_exact_match.py \
+  --adapter-path outputs/v3-full-1.5b \
+  --data-dir full_v3 \
+  --output reports/v3_qlora_1.5b.jsonl
+
+# 4. full 7B
+python3 train_qlora.py --config configs/qlora_v3_full_7b.json
+python3 evaluate_exact_match.py \
+  --adapter-path outputs/v3-full-7b \
+  --data-dir full_v3 \
+  --output reports/v3_qlora_7b.jsonl
 ```
 
-smoke test가 정상 종료되면 전체 설정으로 실행한다.
+학습은 conversational prompt-completion 형식, assistant completion-only loss, 4-bit NF4, all-linear LoRA를 사용한다. 평가는 전체 exact match와 scenario/profile별 exact match를 출력한다.
 
-```bash
-python3 train_qlora.py --config configs/qlora_full.json
-python3 evaluate_exact_match.py --adapter-path outputs/uds-nrc-full
-```
+## 현재 상태와 한계
 
-## 현재 준비 상태
+- 스키마·누출·split·episode replay 검증: 완료
+- 1.5B tokenizer 사전 점검: 완료
+- 실제 weight update: NVIDIA GPU에서 실행 필요
+- 실제 vCAN/ISO-TP trace: 미포함
+- ECU profile: 합성 profile 3개
+- timing, P2/P2*, session timeout: 미포함
 
-- 데이터 schema 및 split 검증: 완료
-- episode replay: 7,200개 모두 완료
-- 정확 중복 및 split leakage 검사: 완료
-- Qwen chat template 적용: 완료
-- token 길이 검사: 최대 284, `max_length=512` 초과 0건
-- smoke/full QLoRA 설정: 완료
-- completion-only loss 구성: 완료
-- 학습 후 exact-match 평가기: 완료
-- 남은 작업: NVIDIA GPU에서 실제 weight update 실행
-
-## 한계
-
-이 데이터는 단일 합성 Virtual ECU의 결정론적 동작에서 생성됐다. `qlora_smoke_test_ready`는 학습 파이프라인을 시험할 수 있다는 뜻이며 실제 ECU에 일반화되는 연구용 최종 데이터라는 뜻은 아니다. 실제 연구에는 허가된 vCAN/ISO-TP 환경의 trace, 다양한 ECU profile, 시간 의존 상태, seed 다양화가 추가로 필요하다.
+따라서 v3는 미관측 합성 ECU 동작에 대한 초기 일반화 실험용이며 실제 ECU 일반화를 입증하지 않는다.

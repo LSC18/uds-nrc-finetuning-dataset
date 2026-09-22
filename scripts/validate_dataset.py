@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import json
 import re
+import argparse
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "full_v2"
 SPLITS = ("train", "validation", "test")
 HEX_REQUEST = re.compile(r"^[0-9A-F]{2}( [0-9A-F]{2})*$")
 
@@ -19,13 +19,17 @@ def load_jsonl(path: Path) -> list[dict[str, object]]:
 
 
 def main() -> int:
-    metadata = json.loads((DATA_DIR / "metadata.json").read_text(encoding="utf-8"))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data-dir", type=Path, default=ROOT / "full_v3")
+    args = parser.parse_args()
+    data_dir = args.data_dir
+    metadata = json.loads((data_dir / "metadata.json").read_text(encoding="utf-8"))
     signatures: dict[str, set[str]] = {}
     episode_ids: dict[str, set[str]] = {}
     counts: dict[str, int] = {}
 
     for split in SPLITS:
-        rows = load_jsonl(DATA_DIR / f"{split}.jsonl")
+        rows = load_jsonl(data_dir / f"{split}.jsonl")
         counts[split] = len(rows)
         signatures[split] = set()
         episode_ids[split] = set()
@@ -38,7 +42,17 @@ def main() -> int:
                 "assistant",
             ]
             assert HEX_REQUEST.fullmatch(messages[-1]["content"])
-            json.loads(messages[1]["content"])
+            prompt = json.loads(messages[1]["content"])
+            if metadata.get("format_version", 1) >= 2:
+                assert set(prompt) == {"goal", "history"}
+                prompt_text = messages[1]["content"]
+                assert "current_state" not in prompt_text
+                assert "state_after" not in prompt_text
+                assert "ecu_profile" not in prompt_text
+                if split == "test":
+                    assert row["ecu_profile"] == metadata["heldout_test_profile"]
+                else:
+                    assert row["ecu_profile"] in metadata["train_profiles"]
             signatures[split].add(
                 json.dumps(messages, ensure_ascii=False, sort_keys=True)
             )
@@ -53,7 +67,12 @@ def main() -> int:
     assert sum(counts.values()) == metadata["sample_count"]
     assert metadata["replay_failures"] == []
     assert metadata["qlora_smoke_test_ready"] is True
-    print(json.dumps({"status": "OK", "split_counts": counts}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {"status": "OK", "data_dir": str(data_dir), "split_counts": counts},
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

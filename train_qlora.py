@@ -30,6 +30,7 @@ def main() -> int:
     config = json.loads(args.config.read_text(encoding="utf-8"))
     model_name = args.model_name or config["model_name"]
     output_dir = args.output_dir or ROOT / config["output_dir"]
+    data_dir = ROOT / config.get("data_dir", "full_v2")
     max_steps = args.max_steps if args.max_steps is not None else config["max_steps"]
 
     if not torch.cuda.is_available():
@@ -54,7 +55,7 @@ def main() -> int:
     def load_split(name: str) -> Dataset:
         rows = [
             json.loads(line)
-            for line in (ROOT / "full_v2" / f"{name}.jsonl").read_text(
+            for line in (data_dir / f"{name}.jsonl").read_text(
                 encoding="utf-8"
             ).splitlines()
         ]

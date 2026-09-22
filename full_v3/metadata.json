@@ -1,0 +1,63 @@
+{
+  "format_version": 2,
+  "purpose": "closed_loop_state_inference_generalization",
+  "training_ready": true,
+  "qlora_smoke_test_ready": true,
+  "prompt_excludes": [
+    "current_state",
+    "state_after",
+    "ecu_profile"
+  ],
+  "train_profiles": [
+    "strict_session_security",
+    "session_only"
+  ],
+  "heldout_test_profile": "security_only_heldout",
+  "generated_at": "2026-09-19T12:48:29+09:00",
+  "seed": 20260919,
+  "episode_count": 15000,
+  "profile_episode_counts": {
+    "security_only_heldout": 1500,
+    "session_only": 7500,
+    "strict_session_security": 6000
+  },
+  "raw_sample_count": 41980,
+  "sample_count": 10407,
+  "unique_sample_count": 10407,
+  "exact_duplicate_count": 31573,
+  "exact_duplicate_ratio": 0.7521,
+  "split_sample_counts": {
+    "train": 8266,
+    "validation": 777,
+    "test": 1364
+  },
+  "scenario_counts": {
+    "failure": 1052,
+    "nrc_invalid_key_recovery": 1466,
+    "nrc_length_recovery": 1536,
+    "nrc_range_recovery": 1517,
+    "nrc_sequence_recovery": 1478,
+    "read_did_success": 1071,
+    "reset_success": 904,
+    "security_probe_recovery": 1773,
+    "session_success": 900,
+    "write_probe_recovery": 3303
+  },
+  "nrc_counts": {
+    "0x11": 245,
+    "0x12": 547,
+    "0x13": 1796,
+    "0x24": 1478,
+    "0x31": 1517,
+    "0x33": 307,
+    "0x35": 1466,
+    "0x7E": 4591
+  },
+  "state_counts": {
+    "default_session:locked": 15087,
+    "default_session:unlocked": 1097,
+    "extended_session:locked": 18942,
+    "extended_session:unlocked": 6854
+  },
+  "replay_failures": []
+}

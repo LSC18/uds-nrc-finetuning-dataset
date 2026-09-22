@@ -8,7 +8,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = sorted((ROOT / "full_v2").glob("*"))
+FILES = sorted(
+    path
+    for directory in (ROOT / "full_v2", ROOT / "full_v3")
+    for path in directory.glob("*")
+)
 
 
 def main() -> int:

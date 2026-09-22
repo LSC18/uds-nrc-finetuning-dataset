@@ -1,0 +1,44 @@
+{
+  "status": "data_ready_waiting_for_cuda",
+  "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+  "data_dir": "/Users/iseungchan/Documents/[WHS4]/uds-nrc-finetuning-dataset/full_v3",
+  "max_length": 512,
+  "truncation_count": 0,
+  "token_stats": {
+    "train": {
+      "count": 8266,
+      "min": 89,
+      "median": 138,
+      "p95": 196,
+      "p99": 228,
+      "max": 228,
+      "over_max_length": 0
+    },
+    "validation": {
+      "count": 777,
+      "min": 91,
+      "median": 135,
+      "p95": 196,
+      "p99": 196,
+      "max": 228,
+      "over_max_length": 0
+    },
+    "test": {
+      "count": 1364,
+      "min": 90,
+      "median": 138,
+      "p95": 202,
+      "p99": 202,
+      "max": 202,
+      "over_max_length": 0
+    }
+  },
+  "environment": {
+    "python": "3.10.2",
+    "torch": "2.12.0",
+    "transformers": "5.8.1",
+    "cuda_available": false,
+    "bf16_supported": false,
+    "gpu": null
+  }
+}
