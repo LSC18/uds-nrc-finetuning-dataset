@@ -44,6 +44,10 @@ shasum -a 256 -c SHA256SUMS
 
 ## 학습 직전 점검
 
+[![Open v3 smoke test in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/LSC18/uds-nrc-finetuning-dataset/blob/main/notebooks/qlora_v3_colab.ipynb)
+
+Colab에서는 위 노트북을 열고 위에서부터 순서대로 실행한다.
+
 ```bash
 python3 scripts/preflight.py \
   --config configs/qlora_v3_smoke_1.5b.json \
