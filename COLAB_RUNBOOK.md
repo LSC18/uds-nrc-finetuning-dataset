@@ -6,7 +6,8 @@
 !nvidia-smi
 !git clone https://github.com/LSC18/uds-nrc-finetuning-dataset.git
 %cd uds-nrc-finetuning-dataset
-!python -m pip install -r requirements-train.txt
+!python -m pip uninstall -y -q torchvision torchaudio torchtext
+!python -m pip install -r requirements-colab.txt
 ```
 
 ## 2. 데이터·런타임 검증
