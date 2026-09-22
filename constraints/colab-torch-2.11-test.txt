@@ -1,0 +1,3 @@
+# Dependency-resolution test baseline observed on Colab T4 / CUDA 12.8.
+# The runtime bootstrap generates this constraint dynamically from installed torch.
+torch==2.11.0

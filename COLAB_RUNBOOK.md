@@ -4,11 +4,15 @@
 
 ```bash
 !nvidia-smi
-!git clone https://github.com/LSC18/uds-nrc-finetuning-dataset.git
+%cd /content
+!test -d uds-nrc-finetuning-dataset/.git && git -C uds-nrc-finetuning-dataset pull --ff-only || git clone https://github.com/LSC18/uds-nrc-finetuning-dataset.git
 %cd uds-nrc-finetuning-dataset
-!python -m pip uninstall -y -q torchvision torchaudio torchtext
-!python -m pip install -r requirements-colab.txt
+!python scripts/bootstrap_colab.py
 ```
+
+설치 스크립트는 Colab에 처음부터 설치된 PyTorch 버전을 constraint로 고정한다.
+이전 설치로 이미 PyTorch가 교체된 런타임은 복구를 시도하지 않고 삭제 후 재시작을
+요구한다.
 
 ## 2. 데이터·런타임 검증
 

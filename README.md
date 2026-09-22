@@ -44,12 +44,13 @@ shasum -a 256 -c SHA256SUMS
 
 ## 학습 직전 점검
 
-[![Open v3 smoke test in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/LSC18/uds-nrc-finetuning-dataset/blob/main/notebooks/qlora_v3_colab.ipynb)
+[![Open v3 smoke test in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/LSC18/uds-nrc-finetuning-dataset/blob/main/notebooks/qlora_v3_colab_v2.ipynb)
 
 Colab에서는 위 노트북을 열고 위에서부터 순서대로 실행한다. Colab이 제공하는
-CUDA 호환 PyTorch를 그대로 사용하며 `requirements-colab.txt`는 PyTorch를
-업그레이드하지 않는다. 기존 설치 셀로 실행해서 `torchvision::nms` 오류가 난
-런타임은 **런타임 → 세션 다시 시작 및 모두 실행**으로 초기화한다.
+CUDA 호환 PyTorch를 그대로 사용하며 `scripts/bootstrap_colab.py`가 현재
+PyTorch 버전을 constraint로 고정한다. 기존 설치 셀로 실행해서
+`torchvision::nms` 오류가 난 런타임은 **런타임 → 연결 해제 및 런타임 삭제**로
+초기화한 뒤 `qlora_v3_colab_v2.ipynb`를 연다.
 
 ```bash
 python3 scripts/preflight.py \
